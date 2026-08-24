@@ -1,0 +1,400 @@
+<meta charset="utf-8">
+<title>Confidentialité de LUME</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap">
+
+<style>
+  :root {
+    --fond: #F7F6F3;
+    --surface: #FFFFFF;
+    --encre: #171A2B;
+    --gris: #74798A;
+    --trait: #E4E2DC;
+    --violet: #5B5CF6;
+    --lavande: #8A7CFF;
+    --peche: #FFB48A;
+    --alerte: #D66B6B;
+    --alerte-fond: #FBEEEE;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --fond: #12141F;
+      --surface: #1B1E2C;
+      --encre: #F2F1EE;
+      --gris: #9AA0B2;
+      --trait: #2C3042;
+      --violet: #8A8BFF;
+      --lavande: #A79CFF;
+      --peche: #FFC5A3;
+      --alerte: #E88A8A;
+      --alerte-fond: #2A1E22;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --fond: #12141F;
+    --surface: #1B1E2C;
+    --encre: #F2F1EE;
+    --gris: #9AA0B2;
+    --trait: #2C3042;
+    --violet: #8A8BFF;
+    --lavande: #A79CFF;
+    --peche: #FFC5A3;
+    --alerte: #E88A8A;
+    --alerte-fond: #2A1E22;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--fond);
+    color: var(--encre);
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 40rem;
+    margin: 0 auto;
+    padding: 3rem 1.25rem 5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2.75rem;
+  }
+
+  .marque { display: flex; align-items: center; gap: .6rem; }
+  .marque span {
+    font-size: .78rem; font-weight: 600; letter-spacing: .34em;
+    text-transform: uppercase;
+  }
+
+  h1 {
+    margin: .9rem 0 0;
+    font-size: clamp(1.9rem, 6.5vw, 2.5rem);
+    font-weight: 700; letter-spacing: -.03em; line-height: 1.1;
+    text-wrap: balance;
+  }
+
+  .date { margin: .6rem 0 0; color: var(--gris); font-size: .9375rem; }
+
+  .brouillon {
+    background: var(--alerte-fond);
+    border: 1px solid var(--alerte);
+    border-radius: 16px;
+    padding: 1rem 1.15rem;
+    font-size: .9375rem;
+  }
+  .brouillon b { color: var(--alerte); }
+
+  section { display: flex; flex-direction: column; gap: .9rem; }
+
+  h2 {
+    margin: 0;
+    font-size: 1.3rem; font-weight: 600;
+    letter-spacing: -.018em; line-height: 1.25;
+    text-wrap: balance;
+  }
+
+  h3 {
+    margin: .6rem 0 0;
+    font-size: 1rem; font-weight: 600; letter-spacing: -.01em;
+  }
+
+  p { margin: 0; }
+  p + p { margin-top: .7rem; }
+  strong { font-weight: 600; }
+
+  a { color: var(--violet); }
+
+  .tableau { overflow-x: auto; }
+  table {
+    width: 100%; border-collapse: collapse; font-size: .9375rem;
+    background: var(--surface);
+    border: 1px solid var(--trait);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  th, td {
+    text-align: left; padding: .75rem 1rem;
+    border-top: 1px solid var(--trait);
+    vertical-align: top;
+  }
+  thead th {
+    border-top: 0; font-weight: 600; font-size: .8125rem;
+    letter-spacing: .04em; text-transform: uppercase; color: var(--gris);
+  }
+  td:first-child { font-weight: 500; white-space: nowrap; }
+
+  /* La puce est POSITIONNÉE, pas mise en grille. En grille, chaque enfant du
+     <li> devenait une cellule : un <strong> suivi de texte donnait trois
+     cellules dans deux colonnes, et la phrase se cassait un mot par ligne. */
+  ul { margin: 0; padding: 0; list-style: none;
+       display: flex; flex-direction: column; gap: .65rem; }
+  ul li { position: relative; padding-left: 1.15rem; }
+  ul li::before {
+    content: ""; position: absolute; left: 0; top: .62em;
+    width: 6px; height: 6px; border-radius: 999px;
+    background: var(--peche);
+  }
+
+  .garantie {
+    background: var(--surface);
+    border: 1px solid var(--trait);
+    border-left: 3px solid var(--lavande);
+    border-radius: 16px;
+    padding: 1.15rem;
+  }
+  .garantie ul li::before { background: var(--lavande); }
+
+  .aremplir {
+    background: var(--alerte-fond);
+    color: var(--alerte);
+    border-radius: 6px;
+    padding: 0 .35rem;
+    font-weight: 600;
+  }
+
+  footer {
+    border-top: 1px solid var(--trait);
+    padding-top: 1.5rem;
+    color: var(--gris);
+    font-size: .875rem;
+  }
+</style>
+
+<div class="page">
+
+  <header>
+    <div class="marque">
+      <svg width="30" height="18" viewBox="0 0 50 30" aria-hidden="true">
+        <mask id="lentille">
+          <rect width="50" height="30" fill="black"></rect>
+          <circle cx="31" cy="15" r="13" fill="white"></circle>
+        </mask>
+        <circle cx="19" cy="15" r="13" fill="#8A7CFF"></circle>
+        <circle cx="31" cy="15" r="13" fill="#FFB48A"></circle>
+        <circle cx="19" cy="15" r="13" fill="#FFFDF8" mask="url(#lentille)"></circle>
+      </svg>
+      <span>Lume</span>
+    </div>
+    <h1>Politique de confidentialité</h1>
+    <p class="date">Version du 24 août 2026 — phase de test fermée.</p>
+  </header>
+
+  <div class="brouillon">
+    <b>Brouillon.</b> Ce texte décrit exactement ce que fait l'application
+    aujourd'hui, mais il n'a pas été relu par un juriste. Trois points le
+    demandent avant toute ouverture : le transfert des photos et des messages
+    hors de l'Union européenne, la collecte du nom de famille, et la
+    vérification de l'âge.
+  </div>
+
+  <section>
+    <h2>Qui est responsable</h2>
+    <p><strong>Valentin Herdies</strong>, personne physique, rue Paul Hulin 59,
+      6180 Courcelles, Belgique — ci-après « nous » — décide de ce qui est
+      collecté et pourquoi.</p>
+    <p>Pour toute question, ou pour exercer tes droits, écris à
+      <a href="mailto:valentin.herdies@icloud.com">valentin.herdies@icloud.com</a>.
+      Tu recevras une réponse sous un mois au plus.</p>
+  </section>
+
+  <section>
+    <h2>Ce qu'on collecte, et pourquoi</h2>
+    <p>LUME est une application de rencontre où l'on discute avant de se voir.
+      Chaque donnée ci-dessous sert à faire fonctionner cela, et rien d'autre.
+      Aucune n'est vendue, louée, ni utilisée pour de la publicité.</p>
+
+    <div class="tableau">
+      <table>
+        <thead>
+          <tr><th>Donnée</th><th>Pourquoi</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Adresse e-mail</td>
+            <td>Créer et retrouver ton compte. Avec « Se connecter avec Apple »,
+              tu peux choisir une adresse relais : nous ne connaissons alors
+              jamais la vraie.</td>
+          </tr>
+          <tr>
+            <td>Prénom</td>
+            <td>Montré à la personne avec qui tu discutes, dès le début.</td>
+          </tr>
+          <tr>
+            <td>Nom de famille</td>
+            <td><strong>Jamais montré à personne.</strong> Il sert uniquement à
+              empêcher qu'il sorte de l'application : sans le connaître, nous ne
+              pourrions pas le reconnaître dans un message.</td>
+          </tr>
+          <tr>
+            <td>Date de naissance</td>
+            <td>Vérifier que tu as 18 ans, et calculer l'âge montré à la
+              révélation.</td>
+          </tr>
+          <tr>
+            <td>Genre et orientation</td>
+            <td>Ne proposer que des personnes qui te correspondent et à qui tu
+              corresponds.</td>
+          </tr>
+          <tr>
+            <td>Position</td>
+            <td>Calculer une distance. <strong>Ta position exacte n'est jamais
+              montrée</strong> : la personne avec qui tu discutes ne verra
+              qu'une ville, et seulement à la révélation.</td>
+          </tr>
+          <tr>
+            <td>Photos</td>
+            <td>Le dévoilement, et lui seul. Elles sont dans un espace privé où
+              personne d'autre que toi n'a le droit de lecture.</td>
+          </tr>
+          <tr>
+            <td>Ta conversation avec l'IA</td>
+            <td>Comprendre ce que tu cherches. C'est ce qui remplace un
+              questionnaire de cinquante questions.</td>
+          </tr>
+          <tr>
+            <td>Tes préférences et critères</td>
+            <td>Choisir qui te proposer. <strong>Jamais montrés à personne</strong>,
+              y compris après la révélation.</td>
+          </tr>
+          <tr>
+            <td>Messages, réactions, réponses de jeu</td>
+            <td>La conversation elle-même, et rien d'autre.</td>
+          </tr>
+          <tr>
+            <td>Réponses de révélation</td>
+            <td>Savoir si vous voulez tous les deux vous découvrir.
+              <strong>Personne ne peut lire la réponse de l'autre</strong> :
+              aucune règle ne l'autorise, pas même en cas de refus.</td>
+          </tr>
+          <tr>
+            <td>Retour de fin de conversation</td>
+            <td>Savoir si le produit fonctionne. Personne d'autre que nous ne
+              le lit — surtout pas la personne concernée.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Qui d'autre voit ces données</h2>
+
+    <h3>Supabase — hébergement</h3>
+    <p>La base de données, les photos et les fonctions serveur sont hébergées
+      chez Supabase, dans un centre de données situé
+      <strong>dans l'Union européenne</strong> (Paris).</p>
+
+    <h3>Anthropic — le modèle qui fait fonctionner l'IA</h3>
+    <p>Trois choses lui sont envoyées, et il faut le savoir précisément :</p>
+    <ul>
+      <li><strong>Ta conversation avec l'IA</strong>, pour qu'elle sache quoi te
+        répondre et ce que tu cherches.</li>
+      <li><strong>Tes photos</strong>, pour vérifier qu'elles peuvent être
+        montrées — qu'il n'y a pas de mineur, de nudité, ni la photo de
+        quelqu'un d'autre. C'est ce qui protège la personne à qui elles seront
+        dévoilées.</li>
+      <li><strong>Le contenu de tes conversations</strong> avec d'autres
+        personnes, pour estimer si l'échange est assez avancé pour que la
+        question de la photo vous soit posée. Aucun prénom ni identifiant n'est
+        transmis avec.</li>
+    </ul>
+    <p>Ces traitements ont lieu <strong>en dehors de l'Union européenne</strong>
+      (États-Unis). Anthropic agit comme sous-traitant, n'utilise pas ces
+      contenus pour entraîner ses modèles, et ne les conserve pas au-delà de ce
+      qui est nécessaire au traitement.</p>
+
+    <h3>Apple</h3>
+    <p>Si tu utilises « Se connecter avec Apple », Apple sait que tu as un
+      compte chez nous. Nous ne recevons d'Apple que ce que tu as accepté de
+      partager.</p>
+
+    <p>Personne d'autre. Pas de régie publicitaire, pas d'outil de mesure
+      d'audience, pas de revente.</p>
+  </section>
+
+  <section>
+    <h2>Ce qui n'est jamais partagé</h2>
+    <div class="garantie">
+      <p>C'est le cœur du produit, et ce ne sont pas des intentions : ces règles
+        vivent dans la base de données, pas dans le code de l'application.</p>
+      <ul>
+        <li><strong>Tes photos</strong>, tant que vous n'avez pas dit oui tous
+          les deux. Il n'existe aucune règle de lecture permettant à quelqu'un
+          d'autre d'y accéder — c'est l'absence même de cette règle qui fait la
+          garantie.</li>
+        <li><strong>Ta réponse à la question du dévoilement.</strong> Ni avant,
+          ni après, ni en cas de refus.</li>
+        <li><strong>Tes préférences et tes critères</strong>, y compris
+          physiques. Jamais, à personne.</li>
+        <li><strong>Ton nom de famille</strong> et <strong>ta position
+          exacte</strong>.</li>
+        <li><strong>Ce que tu as répondu</strong> à la fin d'une conversation.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>Combien de temps</h2>
+    <ul>
+      <li>Une conversation sans réponse est fermée automatiquement au bout de
+        24 heures ; une conversation à deux voix, au bout de 72 heures de
+        silence.</li>
+      <li>Le reste est conservé tant que ton compte existe.</li>
+      <li>Quand tu supprimes ton compte, <strong>tout est effacé
+        immédiatement</strong> : photos, messages, préférences, retours. Il n'y
+        a ni corbeille, ni délai, ni sauvegarde. Les conversations que tu as
+        eues disparaissent aussi pour l'autre personne.</li>
+      <li>L'hébergeur peut conserver des copies techniques temporaires pour la
+        continuité de son service. Elles ne sont ni consultées ni utilisées, et
+        sont écrasées dans le cadre de son propre cycle. Nous n'y avons pas
+        recours pour restaurer un compte supprimé.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Tes droits</h2>
+    <p>Tu peux à tout moment accéder à tes données, les corriger, t'opposer à
+      leur traitement, en demander la portabilité, et les effacer.</p>
+    <ul>
+      <li><strong>Effacer</strong> se fait directement dans l'application :
+        Profil → Réglages → Supprimer mon compte.</li>
+      <li><strong>Mettre en pause</strong> plutôt qu'effacer : Profil →
+        Réglages. Tu n'es alors proposé à personne, et rien n'est perdu.</li>
+      <li>Pour tout le reste, écris à
+        <a href="mailto:valentin.herdies@icloud.com">valentin.herdies@icloud.com</a>.</li>
+    </ul>
+    <p>Si une réponse ne te satisfait pas, tu peux introduire une réclamation
+      auprès de l'<strong>Autorité de protection des données</strong>, rue de la
+      Presse 35, 1000 Bruxelles —
+      <a href="https://www.autoriteprotectiondonnees.be">autoriteprotectiondonnees.be</a>.
+      C'est l'autorité compétente, LUME étant établie en Belgique.</p>
+  </section>
+
+  <section>
+    <h2>Âge minimum</h2>
+    <p>LUME est réservée aux personnes de 18 ans et plus. La date de naissance
+      est demandée à l'inscription et une date plus récente ne peut pas être
+      choisie. Si nous apprenons qu'un compte appartient à une personne mineure,
+      il est supprimé.</p>
+  </section>
+
+  <section>
+    <h2>Si ce texte change</h2>
+    <p>Nous te préviendrons dans l'application avant qu'une modification
+      importante prenne effet. La date en haut de cette page indique la dernière
+      version.</p>
+  </section>
+
+  <footer>
+    LUME est en test fermé. Ce document décrit le fonctionnement réel de
+    l'application au 24 août 2026 et sera mis à jour avec elle.
+  </footer>
+
+</div>
