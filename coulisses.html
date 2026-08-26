@@ -1,0 +1,228 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Coulisses — LUME</title>
+
+<!--
+  L'état de la bêta, consultable depuis un téléphone.
+
+  AUCUNE DONNÉE INDIVIDUELLE ne transite ici : pas de prénom, pas d'adresse,
+  pas de photo. Uniquement des compteurs. Une adresse web finit toujours par
+  traîner quelque part, et une page listant les testeuses nominativement serait
+  exactement la fuite que ce produit ne peut pas se permettre.
+
+  Le jeton vit dans le FRAGMENT (#) et non dans la requête : un fragment n'est
+  jamais envoyé au serveur, n'apparaît pas dans les journaux, et ne fuit pas
+  par l'en-tête Referer.
+-->
+
+<style>
+  :root {
+    --fond:#F7F6F3; --surface:#fff; --encre:#171A2B; --gris:#74798A;
+    --trait:#E4E2DC; --violet:#5B5CF6; --peche:#FFB48A;
+    --vert:#6FA58A; --rouge:#D66B6B;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --fond:#12141F; --surface:#1B1E2C; --encre:#F2F1EE; --gris:#9AA0B2;
+      --trait:#2C3042; --violet:#8A8BFF; --peche:#FFC5A3;
+      --vert:#8FBFA8; --rouge:#E88A8A;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin:0; background:var(--fond); color:var(--encre);
+    font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .page {
+    max-width:34rem; margin:0 auto; padding:2rem 1.1rem 4rem;
+    display:flex; flex-direction:column; gap:1.75rem;
+  }
+  h1 { margin:.7rem 0 0; font-size:1.7rem; font-weight:700; letter-spacing:-.03em; }
+  .quand { margin:.35rem 0 0; color:var(--gris); font-size:.85rem; }
+  h2 {
+    margin:0 0 .55rem; font-size:.7rem; font-weight:600; letter-spacing:.16em;
+    text-transform:uppercase; color:var(--gris);
+  }
+  .bloc {
+    border:1px solid var(--trait); border-radius:16px;
+    background:var(--surface); overflow:hidden; margin:0;
+  }
+  .l {
+    display:grid; grid-template-columns:1fr auto; gap:1rem;
+    align-items:baseline; padding:.7rem 1rem; border-top:1px solid var(--trait);
+  }
+  .l:first-child { border-top:0; }
+  .l dt { color:var(--gris); font-size:.9rem; margin:0; }
+  .l dd { margin:0; font-weight:600; font-variant-numeric:tabular-nums; }
+  .phare dd { font-size:1.15rem; }
+  .alerte {
+    border-left:3px solid var(--rouge); padding:.85rem 1rem;
+    background:var(--surface); border-radius:12px; font-size:.9rem;
+  }
+  .alerte.ok { border-left-color:var(--vert); }
+  .alerte code {
+    font-size:.85em; background:var(--fond); padding:.1rem .3rem;
+    border-radius:4px;
+  }
+  .pastille {
+    display:inline-block; width:7px; height:7px; border-radius:99px;
+    background:var(--vert); margin-right:.45rem;
+  }
+  .pastille.eteinte { background:var(--rouge); }
+  footer {
+    color:var(--gris); font-size:.8rem;
+    border-top:1px solid var(--trait); padding-top:1.1rem;
+  }
+</style>
+
+<div class="page">
+  <header>
+    <svg width="30" height="18" viewBox="0 0 50 30" aria-hidden="true">
+      <mask id="l"><rect width="50" height="30" fill="#000"/>
+      <circle cx="31" cy="15" r="13" fill="#fff"/></mask>
+      <circle cx="19" cy="15" r="13" fill="#8A7CFF"/>
+      <circle cx="31" cy="15" r="13" fill="#FFB48A"/>
+      <circle cx="19" cy="15" r="13" fill="#FFFDF8" mask="url(#l)"/>
+    </svg>
+    <h1>Coulisses</h1>
+    <p class="quand" id="quand">Relevé…</p>
+  </header>
+  <div id="contenu"></div>
+  <footer>
+    Aucune donnée individuelle ne passe par cette page — ni prénom, ni adresse,
+    ni photo. Uniquement des compteurs. Pour savoir <em>qui</em> est bloqué :
+    <code>./outils/qui-est-bloque.sh</code> depuis le Mac.
+  </footer>
+</div>
+
+<script>
+(function () {
+  var SOURCE = 'https://ynaticxwskwczhnjllqs.supabase.co/functions/v1/coulisses';
+  var contenu = document.getElementById('contenu');
+  var quand = document.getElementById('quand');
+
+  function echappe(t) {
+    return String(t).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+
+  function ligne(libelle, valeur, phare) {
+    return '<div class="l' + (phare ? ' phare' : '') + '"><dt>' + libelle +
+      '</dt><dd>' + echappe(valeur) + '</dd></div>';
+  }
+
+  function bloc(titre, lignes) {
+    return '<section><h2>' + titre + '</h2><dl class="bloc">' +
+      lignes.join('') + '</dl></section>';
+  }
+
+  function depuis(iso) {
+    if (!iso) return 'jamais';
+    var min = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+    if (min < 1) return "à l'instant";
+    if (min < 60) return 'il y a ' + min + ' min';
+    var h = Math.floor(min / 60);
+    if (h < 48) return 'il y a ' + h + ' h';
+    return 'il y a ' + Math.floor(h / 24) + ' j';
+  }
+
+  function rendre(d) {
+    var invisibles = d.gens.inscrits - d.gens.photo_ok;
+    var alertes = [];
+
+    if (invisibles > 0) {
+      alertes.push('<div class="alerte"><b>' + invisibles +
+        ' personne(s) ne sont proposées à personne.</b> Presque toujours : ' +
+        'pas de photo, ou photo écartée. Les noms sont sur le Mac — ' +
+        '<code>./outils/qui-est-bloque.sh</code>.</div>');
+    }
+    if (d.photos.en_attente > 0) {
+      alertes.push('<div class="alerte">' + d.photos.en_attente +
+        ' photo(s) attendent leur examen. Normalement quelques secondes.</div>');
+    }
+    if (!d.serveur.balayage || !d.serveur.balayage.actif) {
+      alertes.push('<div class="alerte">Le balayage automatique est arrêté. ' +
+        'Des conversations muettes ne se libèrent plus.</div>');
+    }
+    if (!alertes.length) {
+      alertes.push('<div class="alerte ok">Rien à signaler. Tout le monde est ' +
+        'en état de recevoir une proposition.</div>');
+    }
+
+    var bloques = [];
+    Object.keys(d.bloques || {}).forEach(function (motif) {
+      if (motif !== 'rien ne le bloque') {
+        bloques.push(ligne(echappe(motif), d.bloques[motif]));
+      }
+    });
+
+    var html = alertes.join('') +
+      bloc('Les gens', [
+        ligne('Inscrits', d.gens.inscrits, true),
+        ligne("Ont fini de parler à l'IA", d.gens.onboarding),
+        ligne('Ont une photo acceptée', d.gens.photo_ok, true),
+        ligne('Cherchent pour ce soir', d.gens.ce_soir),
+        ligne('En retrait', d.gens.retrait)
+      ]) +
+      (bloques.length ? bloc('Ce qui bloque', bloques) : '') +
+      bloc('Les conversations', [
+        ligne('Rencontres proposées', d.tunnel.rencontres),
+        ligne('En cours', d.tunnel.en_cours),
+        ligne("Où quelqu'un a écrit", d.tunnel.un_message),
+        ligne('Où les deux ont écrit', d.tunnel.deux_voix, true),
+        ligne("Allées jusqu'à la photo", d.tunnel.revelees, true)
+      ]) +
+      bloc("Ce qu'il en est advenu", [
+        ligne('Retours donnés', d.retours.donnes),
+        ligne('Ça a mené quelque part', d.retours.reussites, true),
+        ligne("Ça s'est arrêté", d.retours.arrets)
+      ]) +
+      bloc('Les photos', [
+        ligne('Acceptées', d.photos.acceptees),
+        ligne("En cours d'examen", d.photos.en_attente),
+        ligne('Écartées', d.photos.refusees),
+        ligne('Dernier examen', depuis(d.photos.dernier_examen))
+      ]) +
+      bloc('Le serveur', [
+        ligne('<span class="pastille"></span>Base de données', 'répond'),
+        ligne('<span class="pastille' +
+          (d.serveur.balayage && d.serveur.balayage.actif ? '' : ' eteinte') +
+          '"></span>Balayage automatique',
+          d.serveur.balayage && d.serveur.balayage.actif ? 'actif' : 'arrêté'),
+        ligne('Dernier inscrit', depuis(d.serveur.dernier_inscrit)),
+        ligne('Dernier message', depuis(d.serveur.dernier_message)),
+        ligne('Photos examinées, 24 h', d.serveur.examens_24h)
+      ]);
+
+    contenu.innerHTML = html;
+    quand.textContent = 'Relevé ' +
+      new Date().toLocaleString('fr-BE') + ' · se rafraîchit seul';
+  }
+
+  function charger() {
+    var jeton = location.hash.slice(1);
+    if (!jeton) {
+      contenu.innerHTML = '<div class="alerte">Adresse incomplète : ' +
+        'il manque le jeton après le #.</div>';
+      return;
+    }
+    fetch(SOURCE + '?jeton=' + encodeURIComponent(jeton), { cache: 'no-store' })
+      .then(function (r) {
+        if (!r.ok) throw new Error(r.status);
+        return r.json();
+      })
+      .then(rendre)
+      .catch(function () {
+        contenu.innerHTML = '<div class="alerte">Le relevé n\'a pas abouti. ' +
+          'Jeton invalide, ou serveur injoignable.</div>';
+      });
+  }
+
+  charger();
+  setInterval(charger, 120000);
+})();
+</script>
