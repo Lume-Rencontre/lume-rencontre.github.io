@@ -58,6 +58,41 @@
   .l dt { color:var(--gris); font-size:.9rem; margin:0; }
   .l dd { margin:0; font-weight:600; font-variant-numeric:tabular-nums; }
   .phare dd { font-size:1.15rem; }
+  /* Prévenir tout le monde. Encadré, et distinct du reste : cette partie
+     ÉCRIT, tout le reste de la page ne fait que lire. */
+  .diffusion {
+    background:var(--surface); border:1px solid var(--trait);
+    border-radius:12px; padding:1rem; margin:1.6rem 0 0;
+  }
+  .diffusion h2 {
+    font-size:.72rem; letter-spacing:.09em; text-transform:uppercase;
+    color:var(--gris); margin:0 0 .2rem;
+  }
+  .diffusion .pourquoi {
+    font-size:.82rem; color:var(--gris); margin:0 0 .8rem; line-height:1.5;
+  }
+  .diffusion textarea {
+    width:100%; box-sizing:border-box; min-height:5.2rem; resize:vertical;
+    font:inherit; font-size:.95rem; color:var(--encre);
+    background:var(--fond); border:1px solid var(--trait);
+    border-radius:10px; padding:.7rem .8rem;
+  }
+  .diffusion textarea:focus {
+    outline:2px solid var(--violet); outline-offset:1px; border-color:transparent;
+  }
+  .diffusion .bas {
+    display:flex; align-items:center; gap:.8rem; margin-top:.7rem;
+    flex-wrap:wrap;
+  }
+  .diffusion button {
+    font:inherit; font-size:.9rem; font-weight:600; cursor:pointer;
+    background:var(--violet); color:#fff; border:0;
+    border-radius:999px; padding:.55rem 1.2rem;
+  }
+  .diffusion button:disabled { opacity:.4; cursor:default; }
+  .diffusion .compte, .diffusion .etat {
+    font-size:.8rem; color:var(--gris);
+  }
   .alerte {
     border-left:3px solid var(--rouge); padding:.85rem 1rem;
     background:var(--surface); border-radius:12px; font-size:.9rem;
@@ -91,6 +126,23 @@
     <p class="quand" id="quand">Relevé…</p>
   </header>
   <div id="contenu"></div>
+  <section class="diffusion">
+    <h2>Prévenir tout le monde</h2>
+    <p class="pourquoi">
+      Arrive sur l'écran verrouillé de tous les inscrits, au nom de LUME.
+      Sert à donner rendez-vous — « ce soir 20 h, tout le monde en ligne » —
+      pas à relancer les gens. Le jeton d'envoi est demandé une fois par
+      onglet, et n'est jamais gardé.
+    </p>
+    <textarea id="message" maxlength="200"
+      placeholder="Ce soir 20 h, on est tous en ligne. Ouvre l'app."></textarea>
+    <div class="bas">
+      <button id="envoyer" disabled>Envoyer</button>
+      <span class="compte" id="reste"></span>
+      <span class="etat" id="etat-envoi"></span>
+    </div>
+  </section>
+
   <footer>
     Aucune donnée individuelle ne passe par cette page — ni prénom, ni adresse,
     ni photo. Uniquement des compteurs. Pour savoir <em>qui</em> est bloqué :
@@ -101,6 +153,7 @@
 <script>
 (function () {
   var SOURCE = 'https://ynaticxwskwczhnjllqs.supabase.co/functions/v1/coulisses';
+  var DIFFUSION = 'https://ynaticxwskwczhnjllqs.supabase.co/functions/v1/diffuser';
   var contenu = document.getElementById('contenu');
   var quand = document.getElementById('quand');
 
@@ -210,7 +263,10 @@
         'il manque le jeton après le #.</div>';
       return;
     }
-    fetch(SOURCE + '?jeton=' + encodeURIComponent(jeton), { cache: 'no-store' })
+    // Le jeton part en EN-TÊTE. Il vivait dans le fragment — qui ne quitte
+    // jamais le navigateur — puis repartait dans un « ?jeton= », donc dans les
+    // journaux du serveur. La moitié de la précaution se perdait là.
+    fetch(SOURCE, { cache: 'no-store', headers: { 'x-jeton': jeton } })
       .then(function (r) {
         if (!r.ok) throw new Error(r.status);
         return r.json();
@@ -224,5 +280,94 @@
 
   charger();
   setInterval(charger, 120000);
+
+  // ---------------------------------------------------------------------
+  // PRÉVENIR TOUT LE MONDE
+  //
+  // Le geste le plus dangereux de la page, et le seul qui écrit. D'où trois
+  // frictions volontaires : un second jeton, le nombre de destinataires montré
+  // avant de demander confirmation, et une confirmation qui répète le message.
+  //
+  // Le jeton d'envoi ne va NI dans l'adresse NI sur le disque : sessionStorage
+  // meurt avec l'onglet. L'adresse du tableau de bord traîne sur un téléphone ;
+  // celle-là ne doit rien pouvoir déclencher toute seule.
+  // ---------------------------------------------------------------------
+  var champ = document.getElementById('message');
+  var bouton = document.getElementById('envoyer');
+  var etat = document.getElementById('etat-envoi');
+  var compteur = document.getElementById('reste');
+
+  function jetonDenvoi() {
+    var j = sessionStorage.getItem('diffusion');
+    if (!j) {
+      j = prompt('Jeton d\u2019envoi (il n\u2019est pas gardé après cet onglet)');
+      if (j) sessionStorage.setItem('diffusion', j.trim());
+    }
+    return j ? j.trim() : null;
+  }
+
+  champ.addEventListener('input', function () {
+    var reste = 180 - champ.value.length;
+    compteur.textContent = reste + ' caractères restants';
+    compteur.style.color = reste < 0 ? '#D66B6B' : '';
+    bouton.disabled = champ.value.trim().length === 0 || reste < 0;
+  });
+
+  bouton.addEventListener('click', function () {
+    var jeton = jetonDenvoi();
+    if (!jeton) return;
+    var corps = champ.value.trim();
+
+    bouton.disabled = true;
+    etat.textContent = 'Je compte les destinataires…';
+
+    // Essai à blanc d'abord : « envoyer à tout le monde » ne veut rien dire
+    // tant qu'on ne sait pas combien ils sont.
+    fetch(DIFFUSION, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-jeton': jeton },
+      body: JSON.stringify({ corps: corps, essai: true })
+    })
+      .then(function (r) { return r.json().then(function (d) {
+        if (!r.ok) throw new Error(d.erreur || r.status); return d; }); })
+      .then(function (d) {
+        var n = d.destinataires;
+        if (n === 0) {
+          etat.textContent = 'Aucun téléphone enregistré. Rien à envoyer.';
+          bouton.disabled = false;
+          return;
+        }
+        var ok = confirm(
+          'Envoyer à ' + n + ' téléphone' + (n > 1 ? 's' : '') + ' :\n\n« ' +
+          corps + ' »\n\nCe geste ne s\u2019annule pas.');
+        if (!ok) { etat.textContent = ''; bouton.disabled = false; return; }
+
+        etat.textContent = 'Envoi…';
+        return fetch(DIFFUSION, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', 'x-jeton': jeton },
+          body: JSON.stringify({ corps: corps })
+        })
+          .then(function (r) { return r.json().then(function (d) {
+            if (!r.ok) throw new Error(d.erreur || r.status); return d; }); })
+          .then(function (d) {
+            etat.textContent = 'Parti sur ' + d.atteints + ' téléphone' +
+              (d.atteints > 1 ? 's' : '') + '.';
+            champ.value = '';
+            compteur.textContent = '';
+          });
+      })
+      .catch(function (e) {
+        // Un jeton refusé ne doit pas rester en mémoire, sinon on repose la
+        // question à personne et l'envoi échoue en boucle sans dire pourquoi.
+        if (String(e.message).indexOf('Rien ici') >= 0 || e.message === '404') {
+          sessionStorage.removeItem('diffusion');
+          etat.textContent = 'Jeton refusé.';
+        } else {
+          etat.textContent = 'Échec : ' + e.message;
+        }
+        bouton.disabled = false;
+      });
+  });
 })();
 </script>
