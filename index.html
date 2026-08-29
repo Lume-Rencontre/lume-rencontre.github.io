@@ -1,11 +1,24 @@
+<!doctype html>
+<html lang="fr">
+<head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
 <!-- Google Search Console : prouve que ce sous-domaine est à nous.
-     Exigée par Google Cloud pour publier l'écran de consentement OAuth
-     hors du mode Test — sans quoi chaque testeur devrait être inscrit à
-     la main. Publique par construction, et à ne pas retirer : Google
-     revérifie périodiquement et révoque si elle disparaît. -->
+     Exigée par Google Cloud pour publier l'écran de consentement OAuth hors
+     du mode Test — sans quoi chaque bêta-testeur devrait être inscrit à la
+     main. Publique par construction, et à ne pas retirer : Google revérifie
+     périodiquement et révoque la propriété si elle disparaît.
+
+     Elle doit être DANS <head>, littéralement. La page n'avait ni <!doctype>,
+     ni <html>, ni <head> : un navigateur en fabrique un implicitement, le
+     vérificateur de Google non — il cherchait la balise dans une section qui
+     n'existait pas, et refusait une balise pourtant servie correctement. -->
 <meta name="google-site-verification" content="x3_B4sKLuAVVij745s6sS3WSYjSjp8zFOOBNs0tZfh4">
-<title>LUME</title>
+
+<title>LUME — Découvrez avant de voir</title>
+<meta name="description" content="Une application de rencontre où l'on discute d'abord. La photo n'apparaît que le jour où vous avez décidé, tous les deux, de vous découvrir.">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,600;14..32,700&display=swap">
@@ -43,6 +56,8 @@
   a { color: var(--violet); text-decoration: none; }
   a:hover, a:focus-visible { text-decoration: underline; }
 </style>
+</head>
+<body>
 
 <main>
   <div class="marque">
@@ -68,3 +83,6 @@
     <a href="mailto:valentin.herdies@icloud.com">Nous écrire</a>
   </nav>
 </main>
+
+</body>
+</html>
