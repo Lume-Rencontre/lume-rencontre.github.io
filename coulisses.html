@@ -7,10 +7,17 @@
 <!--
   L'état de la bêta, consultable depuis un téléphone.
 
-  AUCUNE DONNÉE INDIVIDUELLE ne transite ici : pas de prénom, pas d'adresse,
-  pas de photo. Uniquement des compteurs. Une adresse web finit toujours par
-  traîner quelque part, et une page listant les testeuses nominativement serait
-  exactement la fuite que ce produit ne peut pas se permettre.
+  CETTE PAGE NOMME LES TESTEURS depuis le 2026-08-30. Elle ne le faisait pas,
+  et ce renversement se dit en clair plutôt qu'en silence : les compteurs
+  disaient « 5 personnes ne sont proposées à personne » sans permettre d'agir.
+
+  Ce qui n'y entre toujours pas : le nom de famille — collecté pour la seule
+  raison d'empêcher qu'il sorte (§7) —, l'adresse, la position, les photos, et
+  le contenu des conversations.
+
+  LE JETON EST DÉSORMAIS LA SEULE BARRIÈRE. L'adresse ne porte plus un nombre
+  mais une liste de gens : elle ne se partage pas, et une capture d'écran de
+  cette page n'est plus anodine.
 
   Le jeton vit dans le FRAGMENT (#) et non dans la requête : un fragment n'est
   jamais envoyé au serveur, n'apparaît pas dans les journaux, et ne fuit pas
@@ -111,6 +118,9 @@
      téléphone de cette plateforme n'est enregistré. Une pastille rouge y
      ferait courir réparer ce qui ne sert pas encore. */
   .pastille.grise { background:var(--gris); }
+  /* Le complément d'une ligne nominative — « pas joignable » — se lit en
+     second, pas à la même force que l'état lui-même. */
+  .l dd .muet { font-weight:400; color:var(--gris); font-size:.85em; }
   footer {
     color:var(--gris); font-size:.8rem;
     border-top:1px solid var(--trait); padding-top:1.1rem;
@@ -148,9 +158,10 @@
   </section>
 
   <footer>
-    Aucune donnée individuelle ne passe par cette page — ni prénom, ni adresse,
-    ni photo. Uniquement des compteurs. Pour savoir <em>qui</em> est bloqué :
-    <code>./outils/qui-est-bloque.sh</code> depuis le Mac.
+    Cette page nomme les testeurs. Pas leur nom de famille, ni adresse, ni
+    photo, ni le contenu d'une conversation — mais le prénom de chacun et son
+    état. <b>Le jeton dans l'adresse est la seule barrière :</b> ne la partage
+    pas, et évite d'en faire une capture d'écran.
   </footer>
 </div>
 
@@ -187,8 +198,20 @@
     return 'il y a ' + Math.floor(h / 24) + ' j';
   }
 
+  var intentions = {
+    ce_soir: 'cherche ce soir', ouvert: 'ouvert',
+    serieux: 'cherche du sérieux', indisponible: 'en retrait'
+  };
+
   function rendre(d) {
     var invisibles = d.gens.inscrits - d.gens.photo_ok;
+    // Deux personnes peuvent porter le même prénom. On ne date QUE celles-là :
+    // une date collée à chaque ligne serait du bruit sur onze lignes sur douze.
+    var homonymes = {};
+    (d.qui || []).forEach(function (g) {
+      var k = String(g.prenom).toLowerCase();
+      homonymes[k] = (homonymes[k] || 0) + 1;
+    });
     var alertes = [];
 
     if (invisibles > 0) {
@@ -288,6 +311,22 @@
         ligne('Écartées', d.photos.refusees),
         ligne('Dernier examen', depuis(d.photos.dernier_examen))
       ]) +
+      bloc('Qui est qui', (d.qui || []).map(function (g) {
+        var bloque = g.etat !== 'rien ne le bloque';
+        // Trois états, comme partout : ça ne va pas, ça va, et « pris » —
+        // en conversation n'est pas une panne, c'est le produit qui marche.
+        var teinte = bloque ? ' eteinte' : (g.parle ? ' grise' : '');
+        var valeur = bloque ? g.etat
+          : (g.parle ? 'en conversation' : intentions[g.intention] || g.intention);
+        return ligne(
+          '<span class="pastille' + teinte + '"></span>' + echappe(g.prenom) +
+            (homonymes[g.prenom.toLowerCase()] > 1
+              ? ' <span class="muet">inscrit le ' +
+                new Date(g.inscrit).toLocaleDateString('fr-BE') + '</span>'
+              : ''),
+          valeur) .replace('</dd>', (g.joignable ? '' :
+            ' <span class="muet">pas joignable</span>') + '</dd>');
+      })) +
       bloc('Les notifications', [
         ligne('<span class="pastille' + (socle ? '' : ' eteinte') +
           '"></span>Prévenir quand on écrit',
