@@ -107,6 +107,10 @@
     background:var(--vert); margin-right:.45rem;
   }
   .pastille.eteinte { background:var(--rouge); }
+  /* Ni verte ni rouge : ce maillon ne concerne encore personne — aucun
+     téléphone de cette plateforme n'est enregistré. Une pastille rouge y
+     ferait courir réparer ce qui ne sert pas encore. */
+  .pastille.grise { background:var(--gris); }
   footer {
     color:var(--gris); font-size:.8rem;
     border-top:1px solid var(--trait); padding-top:1.1rem;
@@ -201,6 +205,50 @@
       alertes.push('<div class="alerte">Le balayage automatique est arrêté. ' +
         'Des conversations muettes ne se libèrent plus.</div>');
     }
+
+    // LES NOTIFICATIONS. Chaque maillon absent se tait au lieu d'échouer :
+    // l'app marche, les messages s'écrivent, et personne n'est prévenu. C'est
+    // la panne qu'on ne découvre qu'en lisant « les gens ne discutent pas ».
+    var n = d.notifications || {};
+    var cles = n.cles || {};
+    // Le socle : les trois secrets, le déclencheur, et l'autre bout du jeton.
+    var socle = n.secrets === 3 && n.sur_message && cles.interne;
+    // Une clé absente n'est rouge que s'il y a des téléphones à joindre.
+    function etat(pose, concerne) {
+      return pose ? '' : (concerne ? ' eteinte' : ' grise');
+    }
+    if (!socle) {
+      alertes.push('<div class="alerte"><b>Personne n\'est prévenu quand on ' +
+        'lui écrit.</b> ' + (n.secrets !== 3
+          ? 'Les secrets internes ne sont pas tous posés.'
+          : (!n.sur_message
+            ? 'Le déclencheur n\'est pas en place sur les messages.'
+            : 'Le jeton interne manque côté fonction.')) + '</div>');
+    }
+    // Une clé absente n'est une panne que s'il y a des téléphones à joindre :
+    // pas de compte Google tant qu'aucun Android n'est enregistré est un état
+    // normal, pas une alerte.
+    if (n.ios > 0 && !cles.apple) {
+      alertes.push('<div class="alerte">La clé d\'Apple n\'est pas posée : ' +
+        'aucun iPhone ne peut être prévenu.</div>');
+    }
+    if (n.android > 0 && !cles.google) {
+      alertes.push('<div class="alerte">Le compte de service Google n\'est ' +
+        'pas posé : aucun téléphone Android ne peut être prévenu.</div>');
+    }
+    if (!n.sur_question) {
+      alertes.push('<div class="alerte">Rien ne prévient quand la question de ' +
+        'la photo s\'ouvre. Deux personnes qui attendent la révélation ' +
+        'cessent d\'écrire, et ne le sauront pas.</div>');
+    }
+    if (n.en_attente > 10) {
+      alertes.push('<div class="alerte">' + n.en_attente + ' envois attendent ' +
+        'd\'être émis. La file ne se vide plus.</div>');
+    }
+    if (n.telephones === 0) {
+      alertes.push('<div class="alerte">Aucun téléphone enregistré. Les ' +
+        'notifications n\'ont personne à joindre.</div>');
+    }
     if (!alertes.length) {
       alertes.push('<div class="alerte ok">Rien à signaler. Tout le monde est ' +
         'en état de recevoir une proposition.</div>');
@@ -239,6 +287,35 @@
         ligne("En cours d'examen", d.photos.en_attente),
         ligne('Écartées', d.photos.refusees),
         ligne('Dernier examen', depuis(d.photos.dernier_examen))
+      ]) +
+      bloc('Les notifications', [
+        ligne('<span class="pastille' + (socle ? '' : ' eteinte') +
+          '"></span>Prévenir quand on écrit',
+          socle ? 'en place' : 'rompu', true),
+        ligne('<span class="pastille' + etat(cles.apple, n.ios > 0) +
+          '"></span>Clé Apple, pour les iPhone',
+          cles.apple ? 'posée' : 'absente'),
+        ligne('<span class="pastille' + etat(cles.google, n.android > 0) +
+          '"></span>Compte Google, pour Android',
+          cles.google ? 'posé' : 'absent'),
+        ligne('Secrets côté base', (n.secrets || 0) + ' sur 3'),
+        ligne('Quand la photo s\'ouvre',
+          n.sur_question ? 'prévient' : 'ne prévient pas'),
+        ligne('Téléphones enregistrés',
+          (n.telephones || 0) + ' — ' + (n.ios || 0) + ' iOS, ' +
+          (n.android || 0) + ' Android'),
+        ligne('Joignables, app fermée',
+          (n.joignables || 0) + ' sur ' + d.gens.inscrits, true),
+        // Six heures : ce que pg_net garde. « 0 » après une nuit calme ne veut
+        // pas dire panne — il n'y a simplement eu personne à prévenir.
+        ligne('Envois demandés, 6 h', n.appels || 0),
+        ligne('Partis vers un téléphone, 6 h', n.parties || 0),
+        ligne('En attente d\'émission', n.en_attente || 0),
+        ligne('Dernière diffusion', n.diffusion
+          ? n.diffusion.atteints + ' téléphone' +
+            (n.diffusion.atteints > 1 ? 's' : '') + ', ' +
+            depuis(n.diffusion.quand)
+          : 'jamais')
       ]) +
       bloc('Le serveur', [
         ligne('<span class="pastille"></span>Base de données', 'répond'),
