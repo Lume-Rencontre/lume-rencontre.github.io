@@ -100,6 +100,19 @@
   .diffusion .compte, .diffusion .etat {
     font-size:.8rem; color:var(--gris);
   }
+  /* Le courrier. Les bulles reprennent la logique de l'app : lavande pour la
+     voix de LUME, neutre pour celle du testeur. */
+  .fil { border-top:1px solid var(--trait); padding:.9rem 0 0; margin-top:.9rem; }
+  .fil:first-child { border-top:0; margin-top:.4rem; }
+  .fil .nom { font-weight:600; font-size:.95rem; margin:0 0 .5rem; }
+  .fil .nom .quandmot { font-weight:400; color:var(--gris); font-size:.8rem; }
+  .mot {
+    font-size:.9rem; line-height:1.45; padding:.55rem .75rem; margin:0 0 .4rem;
+    border-radius:12px; background:var(--fond); white-space:pre-wrap;
+    overflow-wrap:anywhere;
+  }
+  .mot.equipe { background:var(--surface); border:1px solid var(--violet); }
+  .fil textarea { min-height:3.2rem; margin-top:.4rem; }
   .alerte {
     border-left:3px solid var(--rouge); padding:.85rem 1rem;
     background:var(--surface); border-radius:12px; font-size:.9rem;
@@ -157,10 +170,27 @@
     </div>
   </section>
 
+  <section class="diffusion" id="bloc-courrier">
+    <h2>Le courrier</h2>
+    <p class="pourquoi">
+      Ce que les testeurs écrivent depuis l'app, et ce que tu leur réponds.
+      Même jeton que la diffusion — la ligne ne passe pas entre lire et écrire,
+      elle passe entre les chiffres et les gens. Chaque réponse fait sonner
+      leur téléphone, au nom de LUME.
+    </p>
+    <div class="bas">
+      <button id="ouvrir-courrier">Ouvrir le courrier</button>
+      <span class="etat" id="etat-courrier"></span>
+    </div>
+    <div id="fils"></div>
+  </section>
+
   <footer>
-    Cette page nomme les testeurs. Pas leur nom de famille, ni adresse, ni
-    photo, ni le contenu d'une conversation — mais le prénom de chacun et son
-    état. <b>Le jeton dans l'adresse est la seule barrière :</b> ne la partage
+    Cette page nomme les testeurs : le prénom de chacun et son état. Jamais
+    leur nom de famille, leur adresse, leurs photos, ni un mot de ce qu'ils
+    s'écrivent entre eux. Le courrier, lui, montre ce qu'ils écrivent à
+    l'équipe — d'où le second jeton, qui se tape et ne se garde pas.
+    <b>Celui de l'adresse est la seule barrière du reste :</b> ne la partage
     pas, et évite d'en faire une capture d'écran.
   </footer>
 </div>
@@ -169,6 +199,7 @@
 (function () {
   var SOURCE = 'https://ynaticxwskwczhnjllqs.supabase.co/functions/v1/coulisses';
   var DIFFUSION = 'https://ynaticxwskwczhnjllqs.supabase.co/functions/v1/diffuser';
+  var COURRIER = 'https://ynaticxwskwczhnjllqs.supabase.co/functions/v1/courrier';
   var contenu = document.getElementById('contenu');
   var quand = document.getElementById('quand');
 
@@ -485,5 +516,105 @@
         bouton.disabled = false;
       });
   });
+
+  // ---------------------------------------------------------------------
+  // LE COURRIER
+  //
+  // Il ne se charge pas tout seul, et c'est voulu : le relevé au-dessus vit
+  // dans une adresse gardée sur un téléphone, alors qu'ici passe le contenu de
+  // ce que des gens ont écrit. Ça se demande, avec le jeton qu'on tape.
+  //
+  // Tout ce qui vient de la base est du texte écrit par quelqu'un d'autre :
+  // il est échappé sans exception avant d'être posé dans la page.
+  // ---------------------------------------------------------------------
+  var fils = document.getElementById('fils');
+  var etatCourrier = document.getElementById('etat-courrier');
+
+  function quandCourt(iso) {
+    var d = new Date(iso);
+    return d.toLocaleDateString('fr-BE') + ' ' +
+      d.toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function appelCourrier(corps) {
+    var jeton = jetonDenvoi();
+    if (!jeton) return Promise.reject(new Error('sans jeton'));
+    return fetch(COURRIER, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-jeton': jeton },
+      body: JSON.stringify(corps)
+    }).then(function (r) {
+      return r.json().then(function (d) {
+        if (!r.ok) {
+          // Un jeton refusé ne doit pas rester en mémoire, sinon on rejoue
+          // l'échec en boucle sans dire pourquoi.
+          if (r.status === 404) sessionStorage.removeItem('diffusion');
+          throw new Error(d.erreur || r.status);
+        }
+        return d;
+      });
+    });
+  }
+
+  function rendreFils(liste) {
+    if (!liste.length) {
+      fils.innerHTML = '<p class="pourquoi" style="margin-top:.8rem">' +
+        'Personne n\'a encore écrit.</p>';
+      return;
+    }
+    fils.innerHTML = liste.map(function (f, i) {
+      var dernier = f.messages[f.messages.length - 1];
+      return '<div class="fil"><p class="nom">' + echappe(f.prenom) +
+        (dernier.de_lequipe ? '' : ' — attend une réponse') +
+        ' <span class="quandmot">' + quandCourt(dernier.quand) + '</span></p>' +
+        f.messages.map(function (m) {
+          return '<p class="mot' + (m.de_lequipe ? ' equipe' : '') + '">' +
+            echappe(m.contenu) + '</p>';
+        }).join('') +
+        '<textarea id="rep-' + i + '" maxlength="2000" ' +
+        'placeholder="Répondre à ' + echappe(f.prenom) + '…"></textarea>' +
+        '<div class="bas"><button data-qui="' + echappe(f.qui) +
+        '" data-champ="rep-' + i + '">Répondre</button>' +
+        '<span class="etat" id="etat-' + i + '"></span></div></div>';
+    }).join('');
+
+    Array.prototype.forEach.call(
+      fils.querySelectorAll('button[data-qui]'),
+      function (b) { b.addEventListener('click', function () { repondre(b); }); }
+    );
+  }
+
+  function repondre(bouton) {
+    var champ = document.getElementById(bouton.getAttribute('data-champ'));
+    var etat = bouton.parentNode.querySelector('.etat');
+    var corps = champ.value.trim();
+    if (!corps) { etat.textContent = 'Rien à envoyer.'; return; }
+    bouton.disabled = true;
+    etat.textContent = 'Envoi…';
+    appelCourrier({
+      action: 'repondre', qui: bouton.getAttribute('data-qui'), corps: corps
+    }).then(function () {
+      etat.textContent = 'Parti.';
+      champ.value = '';
+      chargerCourrier();
+    }).catch(function (e) {
+      etat.textContent = 'Échec : ' + e.message;
+      bouton.disabled = false;
+    });
+  }
+
+  function chargerCourrier() {
+    etatCourrier.textContent = 'Lecture…';
+    appelCourrier({}).then(function (d) {
+      etatCourrier.textContent = '';
+      rendreFils(d.fils || []);
+    }).catch(function (e) {
+      etatCourrier.textContent = e.message === 'sans jeton'
+        ? '' : 'Échec : ' + e.message;
+    });
+  }
+
+  document.getElementById('ouvrir-courrier')
+    .addEventListener('click', chargerCourrier);
 })();
 </script>
