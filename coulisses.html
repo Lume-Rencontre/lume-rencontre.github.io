@@ -138,6 +138,36 @@
     color:var(--gris); font-size:.8rem;
     border-top:1px solid var(--trait); padding-top:1.1rem;
   }
+
+  /* SUR GRAND ÉCRAN, LA MÊME PAGE SE DÉPLIE.
+     Pas une seconde page : deux fichiers jumeaux divergent à la première
+     correction, et c'est toujours celui qu'on ne regarde pas qui ment. Rien
+     n'est déplacé, rien n'est caché, rien n'est ajouté — seule la mise en page
+     change, et le téléphone ne voit aucune de ces règles.
+
+     Le seuil est en `rem` : à 62 rem, un iPad en paysage et un Mac passent en
+     colonnes, un iPhone jamais, même à l'horizontale. */
+  @media (min-width: 62rem) {
+    .page {
+      max-width:76rem; display:grid; align-items:start;
+      grid-template-columns:1fr 1fr; column-gap:1.75rem; row-gap:1.75rem;
+    }
+    /* Ce qui se lit d'un bloc reste pleine largeur : un titre coupé en deux
+       colonnes et un pied de page en colonne se lisent mal. */
+    .page > header, .page > #contenu, .page > footer { grid-column:1 / -1; }
+    /* Les relevés en trois colonnes : tout tient sans défiler, ce qui est
+       exactement ce qu'on demande à un tableau de bord. */
+    #contenu {
+      display:grid; grid-template-columns:repeat(3, minmax(0, 1fr));
+      gap:1.5rem; align-items:start;
+    }
+    /* Une alerte traverse : elle doit se voir avant les chiffres, pas se
+       ranger dans une colonne comme un compteur de plus. */
+    #contenu > .alerte { grid-column:1 / -1; }
+    /* Les deux zones qui ÉCRIVENT restent côte à côte, sous les relevés. */
+    .diffusion { margin:0; }
+    .fil textarea { min-height:4.5rem; }
+  }
 </style>
 
 <div class="page">
